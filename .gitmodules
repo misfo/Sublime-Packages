@@ -1,0 +1,9 @@
+[submodule "Vintage Dev"]
+	path = Vintage Dev
+	url = http://github.com/sublimehq/Vintage.git
+[submodule "CoffeeScript"]
+	path = CoffeeScript
+	url = http://github.com/jashkenas/coffee-script-tmbundle
+[submodule "Git"]
+	path = Git
+	url = http://github.com/kemayo/sublime-text-2-git.git
