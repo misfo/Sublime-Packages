@@ -1,0 +1,10 @@
+[
+	{
+		"caption": "Clojure: Symbol Documentation",
+		"command": "symbol_documentation"
+	},
+	{
+		"caption": "Clojure: Symbol Source",
+		"command": "symbol_source"
+	}
+]
