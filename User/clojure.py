@@ -14,6 +14,10 @@ def classpath_relative_path(file_name):
 		if segment == "src": return string.join(segments, "/")
 		segments.insert(0, segment)
 
+def find_hash_value(key, clj):
+	match = re.search(key + r"[\s\n]+(\d+)", clj)
+	return match.group(1) if match else None
+
 def output_to_view(v, output):
 	edit = v.begin_edit()
 	v.insert(edit, 0, output)
@@ -47,17 +51,18 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 			self._output_to_panel("No folder open containing " + file_name)
 			sys.exit(1)
 
+		project_clj_file_name = os.path.join(proj_folder, 'project.clj')
 		try:
-			project_clj = open(os.path.join(proj_folder, 'project.clj'), 'r').read()
+			project_clj = open(project_clj_file_name, 'r').read()
 		except IOError:
 			self._output_to_panel("No project.clj found in " + proj_folder)
 			sys.exit(1)
 
-		match = re.search(r":repl-port[,\s\n]+(\d+)", project_clj)
-		if match:
-			return int(match.group(1))
+		repl_port = find_hash_value(":repl-port", project_clj)
+		if repl_port:
+			return int(repl_port)
 		else:
-			self._output_to_panel("A :repl-port must be specified in your project.clj file")
+			self._output_to_panel("No :repl-port specified in " + project_clj_file_name)
 			sys.exit(1)
 
 	def _symbol_under_cursor(self):
