@@ -79,7 +79,11 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 		self.view.window().run_command("show_panel", {"panel": "output.clojure_output"})
 
 	def _socket_send(self, edit, expr, use_buffer = False, strip_nil_return = False):
-		s = LeinReplSocket(self._repl_port_number())
+		try:
+			port = self._repl_port_number()
+			s = LeinReplSocket(port)
+		except socket.error:
+			self._output_to_panel("No repl is listenting on port " + str(port) + "\nPlease start one with `lein repl`")
 
 		(output, prompt) = s.send(None)
 		print "prompt before everything", prompt
