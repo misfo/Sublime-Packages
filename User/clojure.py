@@ -1,7 +1,5 @@
 import re, os, socket, string, sublime, sublime_plugin
 
-port = 46167
-
 def clean(str):
 	return str.translate(None, '\r') if str else None
 
@@ -22,7 +20,7 @@ def output_to_view(v, output):
 	v.end_edit(edit)
 
 class LeinReplSocket:
-	def __init__(self):
+	def __init__(self, port):
 		self.sock = socket.socket()
 		self.sock.connect(('localhost', port))
 		self.sock.settimeout(2)
@@ -40,6 +38,28 @@ class LeinReplSocket:
 
 
 class ClojureReplCommand(sublime_plugin.TextCommand):
+	def _repl_port_number(self):
+		folders = self.view.window().folders()
+		file_name = self.view.file_name()
+		try:
+			proj_folder = (f for f in folders if file_name.startswith(f)).next()
+		except StopIteration:
+			self._output_to_panel("No folder open containing " + file_name)
+			sys.exit(1)
+
+		try:
+			project_clj = open(os.path.join(proj_folder, 'project.clj'), 'r').read()
+		except IOError:
+			self._output_to_panel("No project.clj found in " + proj_folder)
+			sys.exit(1)
+
+		match = re.search(r":repl-port[,\s\n]+(\d+)", project_clj)
+		if match:
+			return int(match.group(1))
+		else:
+			self._output_to_panel("A :repl-port must be specified in your project.clj file")
+			sys.exit(1)
+
 	def _symbol_under_cursor(self):
 		begin = end = self.view.sel()[0].begin()
 		while symbol_char(self.view.substr(begin - 1)): begin -= 1
@@ -59,7 +79,7 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 		self.view.window().run_command("show_panel", {"panel": "output.clojure_output"})
 
 	def _socket_send(self, edit, expr, use_buffer = False, strip_nil_return = False):
-		s = LeinReplSocket()
+		s = LeinReplSocket(self._repl_port_number())
 
 		(output, prompt) = s.send(None)
 		print "prompt before everything", prompt
