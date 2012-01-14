@@ -65,7 +65,7 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 			self._output_to_panel("No :repl-port specified in " + project_clj_file_name)
 			sys.exit(1)
 
-	def _symbol_under_cursor(self):
+	def symbol_under_cursor(self):
 		begin = end = self.view.sel()[0].begin()
 		while symbol_char(self.view.substr(begin - 1)): begin -= 1
 		while symbol_char(self.view.substr(end)): end += 1
@@ -83,7 +83,7 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 		output_to_view(v, output)
 		self.view.window().run_command("show_panel", {"panel": "output.clojure_output"})
 
-	def _socket_send(self, edit, expr, use_buffer = False, strip_nil_return = False):
+	def evaluate_form(self, edit, expr, use_buffer = False, strip_nil_return = False):
 		try:
 			port = self._repl_port_number()
 			s = LeinReplSocket(port)
@@ -94,22 +94,21 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 		print "prompt before everything", prompt
 
 		file_name = self.view.file_name()
+		forms = []
 		if file_name:
 			path = classpath_relative_path(file_name)
-			(output, prompt) = s.send("(load \"/" + path + "\")")
-			print "output", output
+			forms.append("(load \"/" + path + "\")")
 
-			print "prompt before in-ns", prompt
-			(output, prompt) = s.send("(in-ns '" + re.sub("/", ".", path) + ")")
-			print "output", output
+			forms.append("(in-ns '" + re.sub("/", ".", path) + ")")
 
-		print "prompt before expr", prompt
-		(output, _) = s.send(expr)
+		forms.append(expr)
+		do_form = "(do " + string.join(forms, "\n  ") + ")"
+		(output, _) = s.send(do_form)
 
 		s.close()
 
 		if not output:
-			self._output_to_panel("There was an error while executing " + expr)
+			self._output_to_panel("There was an error while executing " + do_form)
 			return
 
 		if strip_nil_return:
@@ -118,16 +117,16 @@ class ClojureReplCommand(sublime_plugin.TextCommand):
 		if use_buffer:
 			self._output_to_buffer(expr, output)
 		else:
-			self._output_to_panel(prompt + expr + "\n" + output)
+			self._output_to_panel(prompt + do_form + "\n" + output)
 
 class SymbolDocumentation(ClojureReplCommand):
 	def run(self, edit):
-		symbol = self._symbol_under_cursor()
+		symbol = self.symbol_under_cursor()
 		if not symbol: return
-		self._socket_send(edit, "(clojure.repl/doc " + symbol + ")")
+		self.evaluate_form(edit, "(clojure.repl/doc " + symbol + ")")
 
 class SymbolSource(ClojureReplCommand):
 	def run(self, edit):
-		symbol = self._symbol_under_cursor()
+		symbol = self.symbol_under_cursor()
 		if not symbol: return
-		self._socket_send(edit, "(clojure.repl/source " + symbol + ")", use_buffer = True, strip_nil_return = True)
+		self.evaluate_form(edit, "(clojure.repl/source " + symbol + ")", use_buffer = True, strip_nil_return = True)
