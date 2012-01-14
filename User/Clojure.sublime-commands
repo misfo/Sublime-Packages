@@ -1,10 +1,28 @@
 [
 	{
+		"caption": "Clojure: Evaluate Selection",
+		"command": "clojure_evaluate",
+		"args": {
+			"form": "${selection}",
+			"in_current_ns": true
+		}
+	},
+	{
 		"caption": "Clojure: Symbol Documentation",
-		"command": "symbol_documentation"
+		"command": "clojure_evaluate",
+		"args": {
+			"form": "(clojure.repl/doc ${symbol_under_cursor})",
+			"in_current_ns": true
+		}
 	},
 	{
 		"caption": "Clojure: Symbol Source",
-		"command": "symbol_source"
+		"command": "clojure_evaluate",
+		"args": {
+			"form": "(clojure.repl/source ${symbol_under_cursor})",
+			"in_current_ns": true,
+			"use_buffer": true,
+			"strip_nil_return": true
+		}
 	}
 ]
