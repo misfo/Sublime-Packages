@@ -1,4 +1,4 @@
-import re, os, socket, string, sublime, sublime_plugin
+import asyncore, asynchat, os, re, socket, string, sublime, sublime_plugin
 
 def clean(str):
 	return str.translate(None, '\r') if str else None
@@ -68,6 +68,31 @@ class SymbolUnderCursor(LazyViewString):
 		else:
 			return self.view.substr(sublime.Region(begin, end))
 
+class LeinReplHandler(asynchat.async_chat):
+	def __init__(self, sock, expr, ns):
+		asynchat.async_chat.__init__(self, sock=sock)
+		self.sock = sock
+		self.expr = expr
+		self.ns = ns
+		self.prompt_pending = True
+		self.set_terminator("user=>")
+		self.ibuffer = []
+
+	def collect_incoming_data(self, data):
+		print "data", data
+		if not self.prompt_pending:
+			self.ibuffer.append(data)
+
+	def found_terminator(self):
+		if self.prompt_pending:
+			# just got the first prompt
+			self.sock.send(self.expr + "\n")
+			self.set_terminator(self.ns + "=>")
+			self.return_pending = False
+		else:
+			self.sock.close()
+			self.output = string.join(self.ibuffer)
+
 class LeinReplSocket:
 	def __init__(self, port):
 		self.sock = socket.socket()
@@ -110,41 +135,43 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
 
 	def run(self, edit, form, in_current_ns=None, use_buffer=False, strip_nil_return=False):
 		window = self.view.window()
-		try:
-			port = self._repl_port_number()
-			s = LeinReplSocket(port)
-		except socket.error:
-			exit_with_error(window, "No repl is listenting on port " + str(port) + "\nPlease start one with `lein repl`")
+		file_name = self.view.file_name()
 
 		template = string.Template(form)
 		expr = template.substitute({
 			"selection": Selection(self.view),
 			"symbol_under_cursor": SymbolUnderCursor(self.view)})
 
-		(output, prompt) = s.send(None)
-		print "prompt before everything", prompt
-
-		file_name = self.view.file_name()
 		forms = []
+		ns = "user"
 		if in_current_ns and file_name:
 			path = classpath_relative_path(file_name)
+			ns = re.sub("/", ".", path)
 			forms.append("(load \"/" + path + "\")")
-
-			forms.append("(in-ns '" + re.sub("/", ".", path) + ")")
+			forms.append("(in-ns '" + ns + ")")
 
 		forms.append(expr)
 		do_form = "(do " + string.join(forms, "\n  ") + ")"
-		(output, _) = s.send(do_form)
 
-		s.close()
+		port = self._repl_port_number()
+		sock = socket.socket()
+		try:
+			sock.connect(('localhost', port))
+		except socket.error:
+			exit_with_error(window, "No repl is listening on port " + str(port) + "\nPlease start one with `lein repl`")
+		handler = LeinReplHandler(sock, do_form, ns)
+		# asyncore.loop(5, False, {'clojure': handler})
+		# asyncore.loop()
 
-		if not output:
-			exit_with_error(window, "There was an error while executing " + do_form)
+		# output = handler.output
 
-		if strip_nil_return:
-			output = re.sub(r"\nnil$", "", output)
+		# if not output:
+		# 	exit_with_error(window, "There was an error while executing " + do_form)
 
-		if use_buffer:
-			output_to_scratch_buffer(window, expr, output)
-		else:
-			output_to_panel(window, prompt + do_form + "\n" + output)
+		# if strip_nil_return:
+		# 	output = re.sub(r"\nnil$", "", output)
+
+		# if use_buffer:
+		# 	output_to_scratch_buffer(window, expr, output)
+		# else:
+		# 	output_to_panel(window, prompt + do_form + "\n" + output)
