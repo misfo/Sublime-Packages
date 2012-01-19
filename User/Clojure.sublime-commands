@@ -8,6 +8,14 @@
 		}
 	},
 	{
+		"caption": "Clojure: Expand Macro",
+		"command": "clojure_evaluate",
+		"args": {
+			"form": "(macroexpand '${selection})",
+			"in_current_ns": true
+		}
+	},
+	{
 		"caption": "Clojure: Symbol Documentation",
 		"command": "clojure_evaluate",
 		"args": {
@@ -20,9 +28,7 @@
 		"command": "clojure_evaluate",
 		"args": {
 			"form": "(clojure.repl/source ${symbol_under_cursor})",
-			"in_current_ns": true,
-			"use_buffer": true,
-			"strip_nil_return": true
+			"in_current_ns": true
 		}
 	}
 ]
