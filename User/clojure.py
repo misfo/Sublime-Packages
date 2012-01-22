@@ -121,13 +121,18 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
             exit_with_error("No :repl-port specified in "
                             + project_clj_file_name)
 
-    def run(self, edit, expr,
+    def run(self, edit,
+            expr,
             in_panel = False,
+            input_default = None,
+            input_prompt = None,
             output = '$output',
             syntax_file = 'Packages/Clojure/Clojure.tmLanguage',
             view_name = '$expr'):
         self._window = self.view.window()
+        self._expr = expr
         self._in_panel = in_panel
+        self._input_default = input_default
         self._output = output
         self._syntax_file = syntax_file
         self._view_name = view_name
@@ -139,20 +144,30 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
             self.view.settings().set('clojure_repl_port', port)
 
         try:
-            sock = socket.socket()
-            sock.connect(('localhost', port))
-            sock.settimeout(10)
+            self._sock = socket.socket()
+            self._sock.connect(('localhost', port))
+            self._sock.settimeout(10)
         except socket.error:
             exit_with_error("No repl is listening on port " + str(port)
                             + "\nPlease start one with `lein repl`")
 
-        template = string.Template(expr)
+        if re.search(r"\$\{?from_input_panel\}?", expr):
+            view = self._window.show_input_panel(input_prompt, "",
+                                                 self._handle_input, None, None)
+        else:
+            self._handle_input(None)
+
+    def _handle_input(self, from_input_panel):
+        if from_input_panel == "":
+            from_input_panel = self._input_default
+
+        template = string.Template(self._expr)
         expr = template.safe_substitute({
+            "from_input_panel": from_input_panel,
             "selection": Selection(self.view),
             "symbol_under_cursor": SymbolUnderCursor(self.view)})
 
         exprs = []
-
         file_name = self.view.file_name()
         if file_name:
             path = classpath_relative_path(file_name)
@@ -161,7 +176,7 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
                          + "(in-ns '" + file_ns + "))")
         exprs.append(expr)
 
-        self._thread = Repler(sock, exprs)
+        self._thread = Repler(self._sock, exprs)
         self._thread.start()
         call_after_thread_dies(self._handle_results, self._thread)
 

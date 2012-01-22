@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>fileTypes</key>
+	<array>
+	</array>
+	<key>name</key>
+	<string>Clojure find-doc</string>
+	<key>patterns</key>
+	<array>
+		<dict>
+			<key>captures</key>
+			<dict>
+				<key>1</key>
+				<dict>
+					<key>name</key>
+					<string>entity.name.type</string>
+				</dict>
+			</dict>
+			<key>match</key>
+			<string>^([-\w*+!?&lt;&gt;]+(.[-\w*+!?&lt;&gt;]+)*/[-\w*+!?&lt;&gt;]+)$</string>
+		</dict>
+	</array>
+	<key>scopeName</key>
+	<string>text.find-doc</string>
+	<key>uuid</key>
+	<string>5d37add9-889e-4174-b232-4bd423b84c0b</string>
+</dict>
+</plist>

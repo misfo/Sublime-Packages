@@ -15,6 +15,16 @@
 		}
 	},
 	{
+		"caption": "Clojure: Find Documentation",
+		"command": "clojure_evaluate",
+		"args": {
+			"expr": "(clojure.repl/find-doc ${from_input_panel})",
+			"input_prompt": "(clojure.repl/find-doc _)",
+			"input_default": "\"\"",
+			"syntax_file": "Packages/User/Clojure find-doc.tmLanguage"
+		}
+	},
+	{
 		"caption": "Clojure: Symbol Documentation",
 		"command": "clojure_evaluate",
 		"args": {

@@ -1,3 +1,5 @@
+*.tmLanguage.cache
+
 # ignore packages that ship with ST2
 ASP/
 ActionScript/
