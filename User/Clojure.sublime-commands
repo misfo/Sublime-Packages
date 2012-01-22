@@ -3,32 +3,31 @@
 		"caption": "Clojure: Evaluate Selection",
 		"command": "clojure_evaluate",
 		"args": {
-			"form": "${selection}",
-			"in_current_ns": true
+			"expr": "${selection}"
 		}
 	},
 	{
 		"caption": "Clojure: Expand Macro",
 		"command": "clojure_evaluate",
 		"args": {
-			"form": "(macroexpand '${selection})",
-			"in_current_ns": true
+			"expr": "(macroexpand '${selection})",
+			"view_name": "(macroexpand ...)"
 		}
 	},
 	{
 		"caption": "Clojure: Symbol Documentation",
 		"command": "clojure_evaluate",
 		"args": {
-			"form": "(clojure.repl/doc ${symbol_under_cursor})",
-			"in_current_ns": true
+			"expr": "(clojure.repl/doc ${symbol_under_cursor})",
+			"in_panel": true,
+			"syntax_file": null
 		}
 	},
 	{
 		"caption": "Clojure: Symbol Source",
 		"command": "clojure_evaluate",
 		"args": {
-			"form": "(clojure.repl/source ${symbol_under_cursor})",
-			"in_current_ns": true
+			"expr": "(clojure.repl/source ${symbol_under_cursor})"
 		}
 	}
 ]

@@ -28,12 +28,6 @@ def output_to_view(v, text):
 	v.end_edit(edit)
 	v.set_read_only(True)
 
-def output_result_to_view(v, result):
-	output_to_view(v, "; " + result['ns'] + "=> " + ";" * (max_cols - 5 - len(result['ns'])) + "\n" +
-					  result['expr'] + "\n" +
-					  ";" * max_cols + "\n" +
-					  result['output'] + "\n\n")
-
 def exit_with_status(message):
 	sublime.status_message(message)
 	sys.exit(1)
@@ -126,79 +120,79 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
 		else:
 			exit_with_error("No :repl-port specified in " + project_clj_file_name)
 
-	def run(self, edit, form, in_current_ns=None, use_buffer=False, strip_nil_return=False):
+	def run(self, edit, expr,
+			in_panel = False,
+			output = '$output',
+			syntax_file = 'Packages/Clojure/Clojure.tmLanguage',
+			view_name = '$expr'):
 		self._window = self.view.window()
-		self._port = None
-		self._repl_view = None
+		self._in_panel = in_panel
+		self._output = output
+		self._syntax_file = syntax_file
+		self._view_name = view_name
+		port = self.view.settings().get('clojure_repl_port')
 		repl_ns = None
-		for v in self._window.views():
-			match = re.match(r"\(in-ns '(.+)\)", v.name())
-			if match:
-				repl_ns = match.group(1)
-				self._repl_view = v
-				self._port = self._repl_view.settings().get('clojure_repl_port')
-				break
 
-		if not self._port:
-			self._port = self._repl_port_number()
+		if not port:
+			port = self._repl_port_number()
+			self.view.settings().set('clojure_repl_port', port)
 
 		try:
 			sock = socket.socket()
-			sock.connect(('localhost', self._port))
+			sock.connect(('localhost', port))
 			sock.settimeout(10)
 		except socket.error:
-			exit_with_error("No repl is listening on port " + str(self._port) + "\nPlease start one with `lein repl`")
+			exit_with_error("No repl is listening on port " + str(port) + "\nPlease start one with `lein repl`")
 
-		template = string.Template(form)
-		expr = template.substitute({
+		template = string.Template(expr)
+		expr = template.safe_substitute({
 			"selection": Selection(self.view),
 			"symbol_under_cursor": SymbolUnderCursor(self.view)})
 
 		exprs = []
 
 		file_name = self.view.file_name()
-		if in_current_ns and file_name:
+		if file_name:
 			path = classpath_relative_path(file_name)
 			file_ns = re.sub("/", ".", path)
-			exprs.append("(load \"/" + path + "\")")
-			exprs.append("(binding [*ns* (find-ns '" + file_ns + ")]\n  " + expr + ")")
-		else:
-			exprs.append(expr)
+			exprs.append("(do (load \"/" + path + "\") (in-ns '" + file_ns + "))")
+		exprs.append(expr)
 
 		self._thread = Repler(sock, exprs)
 		self._thread.start()
 		call_after_thread_dies(self._handle_results, self._thread)
 
 	def _handle_results(self):
-		if not self._repl_view:
-			self._repl_view = self._window.new_file()
-			self._repl_view.set_scratch(True)
-			# TODO: put connection details in comment at top of view
-			self._repl_view.set_syntax_file('Packages/Clojure/Clojure.tmLanguage')
-			self._repl_view.settings().set('scroll_past_end', True)
-			self._repl_view.settings().set('clojure_repl_port', self._port)
-			self._repl_view.set_read_only(True)
-			output_to_view(self._repl_view, "; Connected to Clojure REPL on port " +
-											str(self._port) + "\n\n")
+		if self._in_panel:
+			view = self._window.get_output_panel('clojure_output')
+		else:
+			view = self._window.new_file()
+			view.set_scratch(True)
+			view.settings().set('scroll_past_end', True)
+			view.set_read_only(True)
 
-		starting_pt = self._repl_view.size()
-		main_form_pt = starting_pt + max_cols + 1
+		if self._syntax_file:
+			view.set_syntax_file(self._syntax_file)
 
-		for result in self._thread.results:
-			output_result_to_view(self._repl_view, result)
+		result = self._thread.results[-1]
+		template = string.Template(self._output)
+		output_to_view(view, template.safe_substitute(result))
 
-		self._repl_view.sel().clear()
-		self._repl_view.sel().add(sublime.Region(main_form_pt))
-		self._window.run_command('toggle_bookmark')
+		if self._in_panel:
+			self._window.run_command("show_panel", {"panel": "output.clojure_output"})
+		else:
+			view.sel().clear()
+			view.sel().add(sublime.Region(0))
 
-		self._repl_view.set_name("(in-ns '" + self._thread.resulting_ns + ")")
+			view_name_template = string.Template(self._view_name)
+			view.set_name(view_name_template.safe_substitute(result))
 
-		active_view = self._window.active_view()
-		active_group = self._window.active_group()
-		repl_view_group, _ = self._window.get_view_index(self._repl_view)
-		self._window.focus_view(self._repl_view)
-		if repl_view_group != active_group:
-			# give focus back to the originally active view if it's in a different group
-			self._window.focus_view(active_view)
+			active_view = self._window.active_view()
+			active_group = self._window.active_group()
+			repl_view_group, _ = self._window.get_view_index(view)
+			self._window.focus_view(view)
+			if repl_view_group != active_group:
+				# give focus back to the originally active view if it's in a different group
+				self._window.focus_view(active_view)
 
-		self._repl_view.set_viewport_position(self._repl_view.text_to_layout(starting_pt))
+			view.set_viewport_position(view.text_to_layout(0))
