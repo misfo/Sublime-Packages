@@ -17,8 +17,8 @@ def classpath_relative_path(file_name):
         if segment == "src": return string.join(segments, "/")
         segments.insert(0, segment)
 
-def find_hash_value(key, clj):
-    match = re.search(key + r"[\s\n]+(\d+)", clj)
+def find_repl_port(clj):
+    match = re.search(r":repl-port[\s\n]+(\d+)", clj)
     return match.group(1) if match else None
 
 def output_to_view(v, text):
@@ -114,7 +114,7 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
         except IOError:
             exit_with_error("No project.clj found in " + proj_folder)
 
-        repl_port = find_hash_value(":repl-port", project_clj)
+        repl_port = find_repl_port(project_clj)
         if repl_port:
             return int(repl_port)
         else:
