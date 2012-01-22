@@ -124,7 +124,6 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
     def run(self, edit,
             expr,
             in_panel = False,
-            input_default = None,
             input_prompt = None,
             output = '$output',
             syntax_file = 'Packages/Clojure/Clojure.tmLanguage',
@@ -132,7 +131,6 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
         self._window = self.view.window()
         self._expr = expr
         self._in_panel = in_panel
-        self._input_default = input_default
         self._output = output
         self._syntax_file = syntax_file
         self._view_name = view_name
@@ -152,15 +150,14 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
                             + "\nPlease start one with `lein repl`")
 
         if re.search(r"\$\{?from_input_panel\}?", expr):
-            view = self._window.show_input_panel(input_prompt, "",
+            view = self._window.show_input_panel(input_prompt, "#\"\"",
                                                  self._handle_input, None, None)
+            view.sel().clear()
+            view.sel().add(sublime.Region(2))
         else:
             self._handle_input(None)
 
     def _handle_input(self, from_input_panel):
-        if from_input_panel == "":
-            from_input_panel = self._input_default
-
         template = string.Template(self._expr)
         expr = template.safe_substitute({
             "from_input_panel": from_input_panel,
