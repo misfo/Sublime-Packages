@@ -1,5 +1,6 @@
 {
 	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
+	"indent_guide_options": ["draw_normal", "draw_active"],
 	"trim_trailing_white_space_on_save": true,
 	"vintage_start_in_command_mode": true
 }
