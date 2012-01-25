@@ -1,6 +1,6 @@
 [submodule "Vintage Dev"]
 	path = Vintage Dev
-	url = http://github.com/sublimehq/Vintage.git
+	url = http://github.com/misfo/Vintage.git
 [submodule "CoffeeScript"]
 	path = CoffeeScript
 	url = http://github.com/jashkenas/coffee-script-tmbundle
