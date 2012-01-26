@@ -1,4 +1,5 @@
-import re, os, socket, string, sublime, sublime_plugin, threading
+import re, os, socket, string, subprocess, thread, threading, time
+import sublime, sublime_plugin
 from functools import partial
 
 max_cols = 60
@@ -9,6 +10,12 @@ def clean(str):
 def symbol_char(char):
     return re.match("[-\w*+!?/.<>]", char)
 
+def project_path(dir_name):
+    if os.path.isfile(os.path.join(dir_name, 'project.clj')):
+        return dir_name
+    else:
+        return project_path(os.path.split(dir_name)[0])
+
 def classpath_relative_path(file_name):
     (abs_path, ext) = os.path.splitext(file_name)
     segments = []
@@ -16,10 +23,6 @@ def classpath_relative_path(file_name):
         (abs_path, segment) = os.path.split(abs_path)
         if segment == "src": return string.join(segments, "/")
         segments.insert(0, segment)
-
-def find_repl_port(clj):
-    match = re.search(r":repl-port[\s\n]+(\d+)", clj)
-    return match.group(1) if match else None
 
 def output_to_view(v, text):
     v.set_read_only(False)
@@ -36,11 +39,67 @@ def exit_with_error(message):
     sublime.error_message(message)
     sys.exit(1)
 
-def call_after_thread_dies(func, thread):
-    if thread.is_alive():
-        sublime.set_timeout(partial(call_after_thread_dies, func, thread), 100)
-    else:
-        func()
+def new_sock(port):
+    print "port", port
+    sock = socket.socket()
+    sock.connect(('localhost', port))
+    sock.settimeout(10)
+    return sock
+
+def send(sock, expr):
+    if expr: sock.send(expr + "\n")
+    output = "" # TODO use buffer instead?
+    while 1:
+        output += sock.recv(1024)
+        match = re.match(r"(.*\n)?(\S+)=> $", output, re.DOTALL)
+        if match: return (clean(match.group(1)), match.group(2))
+
+# indexed by window id
+repls = {}
+
+class REPL:
+    def __init__(self, proc):
+        self.proc = proc
+        self.port = None
+        self.persistent_sock = None
+        self.ns = None
+        self.view = None
+
+    def connect_sock(self):
+        while not self.persistent_sock and self.proc.poll() == None:
+            line = self.proc.stdout.readline()
+            print "line", line
+            match = re.search(r"server listening on localhost port (\d+)", line)
+            if match:
+                self.port = int(match.group(1))
+                self.persistent_sock = new_sock(self.port)
+                status = "Clojure REPL started on port " + str(self.port)
+                sublime.set_timeout(partial(sublime.status_message, status), 0)
+
+        if not self.persistent_sock:
+            exit_with_error("Unable to start a REPL with `lein repl`")
+
+    def evaluate(self, exprs, persistent, on_complete):
+        print "possibly sleeping"
+        while not self.persistent_sock:
+            time.sleep(0.1)
+        print "done sleeping"
+        sock = self.persistent_sock if persistent else new_sock(self.port)
+
+        ns = self.ns
+        if not ns or not persistent:
+            _, ns = send(sock, None)
+
+        results = []
+        for expr in exprs:
+            output, next_ns = send(sock, expr)
+            results.append({'ns': ns, 'expr': expr, 'output': output})
+            ns = next_ns
+
+        if persistent:
+            self.ns = ns
+
+        sublime.set_timeout(partial(on_complete, results), 0)
 
 class LazyViewString:
     def __init__(self, view):
@@ -69,95 +128,65 @@ class SymbolUnderCursor(LazyViewString):
         else:
             return self.view.substr(sublime.Region(begin, end))
 
-class Repler(threading.Thread):
-    def __init__(self, sock, exprs):
-        threading.Thread.__init__(self)
-        self.sock = sock
-        self.exprs = exprs
-
-    def _send(self, expr):
-        if expr: self.sock.send(expr + "\n")
-        output = "" # TODO use buffer instead?
-        while 1:
-            output += self.sock.recv(1024)
-            match = re.match(r"(.*\n)?(\S+)=> $", output, re.DOTALL)
-            if match: return (clean(match.group(1)), match.group(2))
-
+class ClojureStartRepl(sublime_plugin.WindowCommand):
     def run(self):
-        self.results = []
+        if hasattr(self, 'repl'):
+            exit_code = self.repl.proc.poll()
+            if exit_code == None:
+                print "repl already alive", self.repl
+                return
+            else:
+                print "repl died with exit code", exit_code, self.repl
 
-        _, ns = self._send(None)
+        sublime.status_message("Starting Clojure REPL")
+        #FIXME don't use active view
+        file_name = self.window.active_view().file_name()
+        cwd = None
+        if file_name:
+            cwd = project_path(os.path.split(file_name)[0])
+        else:
+            for folder in self.window.folders():
+                cwd = project_path(folder)
+                if cwd: break
 
-        for expr in self.exprs:
-            output, next_ns = self._send(expr)
-            self.results.append({'ns': ns, 'expr': expr, 'output': output})
-            ns = next_ns
-
-        self.sock.close()
-        self.resulting_ns = ns
-
+        #TODO stderr?
+        proc = subprocess.Popen(["lein", "repl"], stdout=subprocess.PIPE,
+                                                  stdin=subprocess.PIPE,
+                                                  cwd=cwd)
+        self.repl = REPL(proc)
+        repls[self.window.id()] = self.repl
+        thread.start_new_thread(self.repl.connect_sock, ())
 
 class ClojureEvaluate(sublime_plugin.TextCommand):
-    def _repl_port_number(self):
-        window = self.view.window()
-        folders = window.folders()
-        file_name = self.view.file_name()
-        try:
-            # FIXME doesn't work for non-file buffers
-            proj_folder = (f for f in folders if file_name.startswith(f)).next()
-        except StopIteration:
-            exit_with_error("No folder open containing " + file_name)
-
-        project_clj_file_name = os.path.join(proj_folder, 'project.clj')
-        try:
-            project_clj = open(project_clj_file_name, 'r').read()
-        except IOError:
-            exit_with_error("No project.clj found in " + proj_folder)
-
-        repl_port = find_repl_port(project_clj)
-        if repl_port:
-            return int(repl_port)
-        else:
-            exit_with_error("No :repl-port specified in "
-                            + project_clj_file_name)
-
     def run(self, edit,
             expr,
-            in_panel = False,
-            input_prompt = None,
-            output = '$output',
+            input_panel = None,
             syntax_file = 'Packages/Clojure/Clojure.tmLanguage',
-            view_name = '$expr'):
+            view_name = '$expr',
+            **kwargs):
         self._window = self.view.window()
         self._expr = expr
-        self._in_panel = in_panel
-        self._output = output
         self._syntax_file = syntax_file
         self._view_name = view_name
-        port = self.view.settings().get('clojure_repl_port')
-        repl_ns = None
+        self._window.run_command('clojure_start_repl')
 
-        if not port:
-            port = self._repl_port_number()
-            self.view.settings().set('clojure_repl_port', port)
+        if input_panel:
+            it = input_panel['initial_text']
+            on_done = partial(self._handle_input, **kwargs)
+            view = self._window.show_input_panel(input_panel['prompt'],
+                                                 "".join(it) if it else "",
+                                                 on_done, None, None)
 
-        try:
-            self._sock = socket.socket()
-            self._sock.connect(('localhost', port))
-            self._sock.settimeout(10)
-        except socket.error:
-            exit_with_error("No repl is listening on port " + str(port)
-                            + "\nPlease start one with `lein repl`")
-
-        if re.search(r"\$\{?from_input_panel\}?", expr):
-            view = self._window.show_input_panel(input_prompt, "#\"\"",
-                                                 self._handle_input, None, None)
-            view.sel().clear()
-            view.sel().add(sublime.Region(2))
+            if it and len(it) > 1:
+                view.sel().clear()
+                offset = 0
+                for chunk in it[0:-1]:
+                    offset += len(chunk)
+                    view.sel().add(sublime.Region(offset))
         else:
-            self._handle_input(None)
+            self._handle_input(None, **kwargs)
 
-    def _handle_input(self, from_input_panel):
+    def _handle_input(self, from_input_panel, output_to = "repl", **kwargs):
         template = string.Template(self._expr)
         expr = template.safe_substitute({
             "from_input_panel": from_input_panel,
@@ -173,27 +202,43 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
                          + "(in-ns '" + file_ns + "))")
         exprs.append(expr)
 
-        self._thread = Repler(self._sock, exprs)
-        self._thread.start()
-        call_after_thread_dies(self._handle_results, self._thread)
+        repl = repls[self._window.id()]
+        print "about to evaluate", exprs
+        persistent = output_to == "repl"
+        on_complete = partial(self._handle_results,
+                              output_to = output_to,
+                              **kwargs)
+        thread.start_new_thread(repl.evaluate,
+                                (exprs, persistent, on_complete))
 
-    def _handle_results(self):
-        if self._in_panel:
+    def _handle_results(self, results, output_to, output = '$output'):
+        print "got results", results
+        if output_to == "panel":
             view = self._window.get_output_panel('clojure_output')
-        else:
+        elif output_to == "view":
             view = self._window.new_file()
             view.set_scratch(True)
-            view.settings().set('scroll_past_end', True)
             view.set_read_only(True)
+        else:
+            repl = repls[self._window.id()]
+            print "repl.view", repl.view
+            if repl.view: print "repl.view.window()", repl.view.window()
+            if not repl.view:
+                repl.view = self._window.new_file()
+                repl.view.set_scratch(True)
+                repl.view.set_read_only(True)
+                repl.view.settings().set('scroll_past_end', True)
+
+            view = repl.view
 
         if self._syntax_file:
             view.set_syntax_file(self._syntax_file)
 
-        result = self._thread.results[-1]
-        template = string.Template(self._output)
+        result = results[-1]
+        template = string.Template(output)
         output_to_view(view, template.safe_substitute(result))
 
-        if self._in_panel:
+        if output_to == "panel":
             self._window.run_command("show_panel",
                                      {"panel": "output.clojure_output"})
         else:

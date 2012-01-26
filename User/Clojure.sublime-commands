@@ -1,9 +1,16 @@
 [
 	{
+		"caption": "Clojure: Start REPL",
+		"command": "clojure_start_repl"
+	},
+	{
 		"caption": "Clojure: Evaluate Selection",
 		"command": "clojure_evaluate",
 		"args": {
-			"expr": "${selection}"
+			"expr": "${selection}",
+			"view_name": "(in-ns '${ns})",
+			"output": "$ns=> $expr\n$output\n\n",
+			"syntax_file": null
 		}
 	},
 	{
@@ -11,6 +18,7 @@
 		"command": "clojure_evaluate",
 		"args": {
 			"expr": "(macroexpand '${selection})",
+			"output_to": "view",
 			"view_name": "(macroexpand ...)"
 		}
 	},
@@ -19,7 +27,11 @@
 		"command": "clojure_evaluate",
 		"args": {
 			"expr": "(clojure.repl/find-doc ${from_input_panel})",
-			"input_prompt": "(clojure.repl/find-doc _)",
+			"input_panel": {
+				"prompt": "(clojure.repl/find-doc _)",
+				"initial_text": ["#\"", "\""]
+			},
+			"output_to": "view",
 			"syntax_file": "Packages/User/Clojure find-doc.tmLanguage"
 		}
 	},
@@ -28,7 +40,7 @@
 		"command": "clojure_evaluate",
 		"args": {
 			"expr": "(clojure.repl/doc ${symbol_under_cursor})",
-			"in_panel": true,
+			"output_to": "panel",
 			"syntax_file": null
 		}
 	},
@@ -36,7 +48,8 @@
 		"caption": "Clojure: Symbol Source",
 		"command": "clojure_evaluate",
 		"args": {
-			"expr": "(clojure.repl/source ${symbol_under_cursor})"
+			"expr": "(clojure.repl/source ${symbol_under_cursor})",
+			"output_to": "view"
 		}
 	}
 ]
