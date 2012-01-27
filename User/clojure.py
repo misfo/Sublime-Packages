@@ -3,6 +3,7 @@ import sublime, sublime_plugin
 from functools import partial
 
 max_cols = 60
+repls_file = ".clojure-repls.json"
 
 def clean(str):
     return str.translate(None, '\r') if str else None
@@ -40,7 +41,6 @@ def exit_with_error(message):
     sys.exit(1)
 
 def new_sock(port):
-    print "port", port
     sock = socket.socket()
     sock.connect(('localhost', port))
     sock.settimeout(10)
@@ -57,18 +57,43 @@ def send(sock, expr):
 # indexed by window id
 repls = {}
 
+def get_repl(window_id):
+    if repls.get(window_id):
+        return repls[window_id]
+    else:
+        port = sublime.load_settings(repls_file).get(str(window_id))
+        repl = REPL(port)
+        try:
+            repl.connect()
+        except socket.error:
+            sublime.load_settings(repls_file).erase(str(window_id))
+            sublime.save_settings(repls_file)
+            return None
+        repls[window_id] = repl
+        return repl
+
+def save_repl_port(window_id, repl):
+    if repl.port:
+        sublime.load_settings(repls_file).set(window_id, repl.port)
+        sublime.save_settings(repls_file)
+    else:
+        sublime.set_timeout(partial(save_repl_port, window_id, repl), 100)
+
+def set_repl(window_id, repl):
+    repls[window_id] = repl
+    save_repl_port(str(window_id), repl)
+
 class REPL:
-    def __init__(self, cwd):
-        self.cwd = cwd
-        self.port = None
+    def __init__(self, port=None):
+        self.port = port
         self.persistent_sock = None
         self.ns = None
         self.view = None
 
-    def start(self):
+    def start(self, cwd, window_id):
         proc = subprocess.Popen(["lein", "repl"], stdout=subprocess.PIPE,
                                                   stderr=subprocess.PIPE,
-                                                  cwd=self.cwd)
+                                                  cwd=cwd)
         stdout, stderr = proc.communicate()
         match = re.search(r"server listening on localhost port (\d+)", stdout)
         if match:
@@ -83,10 +108,8 @@ class REPL:
         self.persistent_sock = new_sock(self.port)
 
     def evaluate(self, exprs, persistent, on_complete):
-        print "possibly sleeping"
         while not self.persistent_sock:
             time.sleep(0.1)
-        print "done sleeping"
         sock = self.persistent_sock if persistent else new_sock(self.port)
 
         ns = self.ns
@@ -133,9 +156,9 @@ class SymbolUnderCursor(LazyViewString):
 
 class ClojureStartRepl(sublime_plugin.WindowCommand):
     def run(self):
-        if hasattr(self, 'repl'):
-            print "repl already alive", self.repl
-            return
+        wid = self.window.id()
+        repl = get_repl(wid)
+        if repl: return
 
         sublime.status_message("Starting Clojure REPL")
         #FIXME don't use active view
@@ -149,9 +172,9 @@ class ClojureStartRepl(sublime_plugin.WindowCommand):
                 cwd = project_path(folder)
                 if cwd: break
 
-        self.repl = REPL(cwd)
-        repls[self.window.id()] = self.repl
-        thread.start_new_thread(self.repl.start, ())
+        repl = REPL()
+        set_repl(wid, repl)
+        thread.start_new_thread(repl.start, (cwd, wid))
 
 class ClojureEvaluate(sublime_plugin.TextCommand):
     def run(self, edit,
@@ -198,8 +221,7 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
                          + "(in-ns '" + file_ns + "))")
         exprs.append(expr)
 
-        repl = repls[self._window.id()]
-        print "about to evaluate", exprs
+        repl = get_repl(self._window.id())
         persistent = output_to == "repl"
         on_complete = partial(self._handle_results,
                               output_to = output_to,
@@ -208,7 +230,6 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
                                 (exprs, persistent, on_complete))
 
     def _handle_results(self, results, output_to, output = '$output'):
-        print "got results", results
         if output_to == "panel":
             view = self._window.get_output_panel('clojure_output')
         elif output_to == "view":
@@ -216,7 +237,7 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
             view.set_scratch(True)
             view.set_read_only(True)
         else:
-            repl = repls[self._window.id()]
+            repl = get_repl(self._window.id())
             print "repl.view", repl.view
             if repl.view: print "repl.view.window()", repl.view.window()
             if not repl.view:
@@ -242,6 +263,7 @@ class ClojureEvaluate(sublime_plugin.TextCommand):
             view.sel().add(sublime.Region(0))
 
             view_name_template = string.Template(self._view_name)
+            #FIXME uses last command's ns instead of new one
             view.set_name(view_name_template.safe_substitute(result))
 
             active_view = self._window.active_view()
