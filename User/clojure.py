@@ -66,17 +66,14 @@ class REPL:
         self.view = None
 
     def connect_sock(self):
-        while not self.persistent_sock and self.proc.poll() == None:
-            line = self.proc.stdout.readline()
-            print "line", line
-            match = re.search(r"server listening on localhost port (\d+)", line)
-            if match:
-                self.port = int(match.group(1))
-                self.persistent_sock = new_sock(self.port)
-                status = "Clojure REPL started on port " + str(self.port)
-                sublime.set_timeout(partial(sublime.status_message, status), 0)
-
-        if not self.persistent_sock:
+        stdout, stderr = self.proc.communicate()
+        match = re.search(r"server listening on localhost port (\d+)", stdout)
+        if match:
+            self.port = int(match.group(1))
+            self.persistent_sock = new_sock(self.port)
+            status = "Clojure REPL started on port " + str(self.port)
+            sublime.set_timeout(partial(sublime.status_message, status), 0)
+        else:
             exit_with_error("Unable to start a REPL with `lein repl`")
 
     def evaluate(self, exprs, persistent, on_complete):
@@ -131,12 +128,8 @@ class SymbolUnderCursor(LazyViewString):
 class ClojureStartRepl(sublime_plugin.WindowCommand):
     def run(self):
         if hasattr(self, 'repl'):
-            exit_code = self.repl.proc.poll()
-            if exit_code == None:
-                print "repl already alive", self.repl
-                return
-            else:
-                print "repl died with exit code", exit_code, self.repl
+            print "repl already alive", self.repl
+            return
 
         sublime.status_message("Starting Clojure REPL")
         #FIXME don't use active view
@@ -149,9 +142,8 @@ class ClojureStartRepl(sublime_plugin.WindowCommand):
                 cwd = project_path(folder)
                 if cwd: break
 
-        #TODO stderr?
         proc = subprocess.Popen(["lein", "repl"], stdout=subprocess.PIPE,
-                                                  stdin=subprocess.PIPE,
+                                                  stderr=subprocess.PIPE,
                                                   cwd=cwd)
         self.repl = REPL(proc)
         repls[self.window.id()] = self.repl
