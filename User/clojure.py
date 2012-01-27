@@ -58,23 +58,29 @@ def send(sock, expr):
 repls = {}
 
 class REPL:
-    def __init__(self, proc):
-        self.proc = proc
+    def __init__(self, cwd):
+        self.cwd = cwd
         self.port = None
         self.persistent_sock = None
         self.ns = None
         self.view = None
 
-    def connect_sock(self):
-        stdout, stderr = self.proc.communicate()
+    def start(self):
+        proc = subprocess.Popen(["lein", "repl"], stdout=subprocess.PIPE,
+                                                  stderr=subprocess.PIPE,
+                                                  cwd=self.cwd)
+        stdout, stderr = proc.communicate()
         match = re.search(r"server listening on localhost port (\d+)", stdout)
         if match:
             self.port = int(match.group(1))
-            self.persistent_sock = new_sock(self.port)
             status = "Clojure REPL started on port " + str(self.port)
             sublime.set_timeout(partial(sublime.status_message, status), 0)
+            self.connect()
         else:
             exit_with_error("Unable to start a REPL with `lein repl`")
+
+    def connect(self):
+        self.persistent_sock = new_sock(self.port)
 
     def evaluate(self, exprs, persistent, on_complete):
         print "possibly sleeping"
@@ -136,18 +142,16 @@ class ClojureStartRepl(sublime_plugin.WindowCommand):
         file_name = self.window.active_view().file_name()
         cwd = None
         if file_name:
-            cwd = project_path(os.path.split(file_name)[0])
+            dir_name = os.path.split(file_name)[0]
+            cwd = project_path(dir_name) or dir_name
         else:
             for folder in self.window.folders():
                 cwd = project_path(folder)
                 if cwd: break
 
-        proc = subprocess.Popen(["lein", "repl"], stdout=subprocess.PIPE,
-                                                  stderr=subprocess.PIPE,
-                                                  cwd=cwd)
-        self.repl = REPL(proc)
+        self.repl = REPL(cwd)
         repls[self.window.id()] = self.repl
-        thread.start_new_thread(self.repl.connect_sock, ())
+        thread.start_new_thread(self.repl.start, ())
 
 class ClojureEvaluate(sublime_plugin.TextCommand):
     def run(self, edit,
