@@ -1,50 +1,50 @@
 *.tmLanguage.cache
 
 # ignore packages that ship with ST2
-ASP/
-ActionScript/
-AppleScript/
-Batch File/
-C#/
-C++/
-CSS/
-Clojure/
-Color Scheme - Default/
-D/
-Default/
-Diff/
-Erlang/
-Go/
-Graphviz/
-Groovy/
-HTML/
-Haskell/
-Java/
-JavaScript/
-LaTeX/
-Language - English/
-Lisp/
-Lua/
-Makefile/
-Markdown/
-Matlab/
-OCaml/
-Objective-C/
-PHP/
-Perl/
-Python/
-R/
-Rails/
-Regular Expressions/
-RestructuredText/
-Ruby/
-SQL/
-Scala/
-ShellScript/
-TCL/
-Text/
-Textile/
-Theme - Default/
-Vintage/
-XML/
-YAML/
+/ASP/
+/ActionScript/
+/AppleScript/
+/Batch File/
+/C#/
+/C++/
+/CSS/
+/Clojure/
+/Color Scheme - Default/
+/D/
+/Default/
+/Diff/
+/Erlang/
+/Go/
+/Graphviz/
+/Groovy/
+/HTML/
+/Haskell/
+/Java/
+/JavaScript/
+/LaTeX/
+/Language - English/
+/Lisp/
+/Lua/
+/Makefile/
+/Markdown/
+/Matlab/
+/OCaml/
+/Objective-C/
+/PHP/
+/Perl/
+/Python/
+/R/
+/Rails/
+/Regular Expressions/
+/RestructuredText/
+/Ruby/
+/SQL/
+/Scala/
+/ShellScript/
+/TCL/
+/Text/
+/Textile/
+/Theme - Default/
+/Vintage/
+/XML/
+/YAML/
