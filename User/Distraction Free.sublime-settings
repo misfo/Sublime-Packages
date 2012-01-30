@@ -1,3 +1,9 @@
 {
-	"word_wrap": false
+	"word_wrap": false,
+	"draw_centered": false,
+
+	// hard to find the cursor otherwise
+	"gutter": true
+	// but this doesn't seem to work
+	// "highlight_line": true
 }
