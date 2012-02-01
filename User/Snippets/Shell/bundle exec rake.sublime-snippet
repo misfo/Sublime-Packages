@@ -1,0 +1,7 @@
+<snippet>
+	<content><![CDATA[
+bundle exec rake ${1}
+]]></content>
+	<tabTrigger>bar</tabTrigger>
+	<scope>source.shell,source.dosbatch</scope>
+</snippet>
