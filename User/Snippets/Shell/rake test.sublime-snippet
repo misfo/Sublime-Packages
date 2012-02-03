@@ -1,0 +1,7 @@
+<snippet>
+	<content><![CDATA[
+rake test
+]]></content>
+	<tabTrigger>rt</tabTrigger>
+	<scope>source.shell,source.dosbatch</scope>
+</snippet>

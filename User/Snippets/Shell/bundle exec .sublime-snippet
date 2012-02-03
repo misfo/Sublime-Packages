@@ -1,7 +1,7 @@
 <snippet>
 	<content><![CDATA[
-bundle exec rake ${1}
+bundle exec ${1}
 ]]></content>
-	<tabTrigger>ber</tabTrigger>
+	<tabTrigger>be</tabTrigger>
 	<scope>source.shell,source.dosbatch</scope>
 </snippet>
