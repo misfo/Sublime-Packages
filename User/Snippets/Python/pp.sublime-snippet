@@ -1,6 +1,6 @@
 <snippet>
 	<content><![CDATA[
-print "${1}", ${1}
+print ">>> ${1}\n", repr(${1})
 ]]></content>
 	<tabTrigger>pp</tabTrigger>
 	<scope>source.python</scope>
