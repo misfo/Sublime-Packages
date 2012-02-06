@@ -1,7 +1,5 @@
 <snippet>
-	<content><![CDATA[
-bundle exec ${1}
-]]></content>
+	<content><![CDATA[bundle exec ]]></content>
 	<tabTrigger>be</tabTrigger>
 	<scope>source.shell,source.dosbatch</scope>
 </snippet>
