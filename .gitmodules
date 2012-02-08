@@ -7,3 +7,6 @@
 [submodule "Git"]
 	path = Git
 	url = http://github.com/kemayo/sublime-text-2-git.git
+[submodule "Shell Turtlestein"]
+	path = Shell Turtlestein
+	url = git@github.com:misfo/Shell-Turtlestein.git
