@@ -1,4 +1,6 @@
 {
+	"auto_complete_commit_on_tab": true,
+
 	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
 
 	"indent_guide_options": ["draw_normal", "draw_active"],
