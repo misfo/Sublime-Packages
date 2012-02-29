@@ -1,6 +1,15 @@
 {
 	"auto_complete_commit_on_tab": true,
 
+	"binary_file_patterns":
+	[
+		// defaults from 2180
+		"*.jpg", "*.jpeg", "*.png", "*.gif", "*.ttf", "*.tga", "*.dds", "*.ico", "*.eot", "*.pdf", "*.swf", "*.jar", "*.zip"
+
+		// added
+		, "*.sublime-workspace"
+	],
+
 	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
 
 	// this would normally be turned off on OSX
