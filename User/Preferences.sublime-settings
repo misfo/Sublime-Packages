@@ -1,0 +1,27 @@
+{
+	"auto_complete_commit_on_tab": true,
+
+	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
+
+	// this would normally be turned off on OSX
+	"find_selected_text": true,
+
+	"folder_exclude_patterns":
+	[
+		".svn",
+		".git",
+		".hg",
+		"CVS",
+		".gitk-tmp.*",
+		".idea"
+	],
+
+	// Ignore the Vintage package and use the git version in the "Vintage Dev" directory
+	"ignored_packages": ["Vintage"],
+
+	"indent_guide_options": ["draw_normal", "draw_active"],
+
+	"trim_trailing_white_space_on_save": true,
+
+	"vintage_start_in_command_mode": true
+}
