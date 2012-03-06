@@ -1,2 +1,3 @@
 [
+	{ "keys": ["super+alt+b"], "command": "show_panel", "args": {"panel": "output.exec"} }
 ]
