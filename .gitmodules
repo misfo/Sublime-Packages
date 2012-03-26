@@ -9,4 +9,7 @@
 	url = http://github.com/kemayo/sublime-text-2-git.git
 [submodule "Shell Turtlestein"]
 	path = Shell Turtlestein
-	url = git@github.com:misfo/Shell-Turtlestein.git
+	url = http://github.com/misfo/Shell-Turtlestein.git
+[submodule "Eleven"]
+	path = Eleven
+	url = http://github.com/misfo/Eleven.git
