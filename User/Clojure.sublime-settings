@@ -1,5 +1,8 @@
 {
 	"tab_size": 2,
 	"translate_tabs_to_spaces": true,
-	"word_wrap": false
+	"word_wrap": false,
+
+	// the default with the dash taken out
+	"word_separators": "./\\()\"':,.;<>~!@#$%^&*|+=[]{}`~?"
 }
