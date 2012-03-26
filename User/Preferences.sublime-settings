@@ -30,6 +30,9 @@
 
 	"indent_guide_options": ["draw_normal", "draw_active"],
 
+	// this would normally be turned off on OSX
+	"scroll_past_end": true,
+
 	"trim_trailing_white_space_on_save": true,
 
 	"vintage_start_in_command_mode": true
