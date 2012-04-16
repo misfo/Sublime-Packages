@@ -13,3 +13,9 @@
 [submodule "Eleven"]
 	path = Eleven
 	url = http://github.com/misfo/Eleven.git
+[submodule "SublimeExternalCommand"]
+	path = SublimeExternalCommand
+	url = http://github.com/technocoreai/SublimeExternalCommand.git
+[submodule "SublimePrettyJson"]
+	path = SublimePrettyJson
+	url = https://github.com/dzhibas/SublimePrettyJson.git
