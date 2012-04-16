@@ -1,3 +1,8 @@
 [
+	// overriding defaults
+	{ "keys": ["ctrl+shift+k"], "command": "select_lines", "args": {"forward": false} },
+	{ "keys": ["ctrl+shift+j"], "command": "select_lines", "args": {"forward": true} },
+
+	// additional keybindings
 	{ "keys": ["super+alt+b"], "command": "show_panel", "args": {"panel": "output.exec"} }
 ]
