@@ -25,8 +25,7 @@
 		".idea"
 	],
 
-	// Ignore the Vintage package and use the git version in the "Vintage Dev" directory
-	"ignored_packages": ["Vintage"],
+	"ignored_packages": [],
 
 	"indent_guide_options": ["draw_normal", "draw_active"],
 
