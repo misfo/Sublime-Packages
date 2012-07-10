@@ -1,0 +1,7 @@
+<snippet>
+	<content><![CDATA[
+p "${1}" => (${1})
+]]></content>
+	<tabTrigger>p</tabTrigger>
+	<scope>source.ruby</scope>
+</snippet>
