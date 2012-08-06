@@ -4,15 +4,31 @@
 	"binary_file_patterns":
 	[
 		// defaults from 2180
-		"*.jpg", "*.jpeg", "*.png", "*.gif", "*.ttf", "*.tga", "*.dds", "*.ico", "*.eot", "*.pdf", "*.swf", "*.jar", "*.zip"
+		"*.jpg",
+		"*.jpeg",
+		"*.png",
+		"*.gif",
+		"*.ttf",
+		"*.tga",
+		"*.dds",
+		"*.ico",
+		"*.eot",
+		"*.pdf",
+		"*.swf",
+		"*.jar",
+		"*.zip",
 
 		// added
-		, "*.sublime-workspace"
+		"*.sublime-workspace"
 	],
 
 	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
 
-    "file_exclude_patterns": ["#*#", ".#*"],
+	"file_exclude_patterns":
+	[
+		"#*#",
+		".#*"
+	],
 
 	// this would normally be turned off on OSX
 	"find_selected_text": true,
@@ -27,9 +43,15 @@
 		".idea"
 	],
 
-	"ignored_packages": [],
+	"ignored_packages":
+	[
+	],
 
-	"indent_guide_options": ["draw_normal", "draw_active"],
+	"indent_guide_options":
+	[
+		"draw_normal",
+		"draw_active"
+	],
 
 	// this would normally be turned off on OSX
 	"scroll_past_end": true,
