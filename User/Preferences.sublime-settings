@@ -12,6 +12,8 @@
 
 	"color_scheme": "Packages/Color Scheme - Default/Espresso Libre.tmTheme",
 
+    "file_exclude_patterns": ["#*#", ".#*"],
+
 	// this would normally be turned off on OSX
 	"find_selected_text": true,
 
