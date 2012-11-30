@@ -1,3 +1,4 @@
+import time
 import sublime, sublime_plugin
 
 #TODO: cache balanced-ness until view is modified
@@ -7,50 +8,54 @@ import sublime, sublime_plugin
 delims = {'(': ')'}
 close_delims = frozenset(delims.values())
 
+def index_ranges(view_size, ignored_regions):
+    if len(ignored_regions):
+        ranges = []
+        next_included = 0
+
+        for ignored in ignored_regions:
+            first_ignored = ignored.begin()
+            if first_ignored > next_included:
+                ranges.append(xrange(next_included, first_ignored))
+            next_included = ignored.end()
+
+        if next_included < view_size:
+            ranges.append(xrange(next_included, view_size))
+
+        return ranges
+    else:
+        return [xrange(view_size)]
+
 def braces(code, ignored_regions=[], parse_state={'position': 0, 'stack': []}):
     bs = []
-    ignore_iter = iter(ignored_regions)
     stack = list(parse_state['stack'])
     i = parse_state['position']
 
-    ignore = None
-    try:
-        ignore = ignore_iter.next()
-    except StopIteration:
-        pass
+    ranges = index_ranges(len(code), ignored_regions)
 
-    while True:
-        if ignore and ignore.contains(i):
-            i = ignore.end()
-            try:
-                ignore = ignore_iter.next()
-            except StopIteration:
-                ignore = None
-
-        try:
+    for indexes in ranges:
+        for i in indexes:
             char = code[i]
-        except IndexError:
-            new_state = parse_state.copy()
-            new_state['position'] = i
-            new_state['stack'] = stack
-            return (bs, new_state)
 
-        if char in delims:
-            stack.append(char)
-            bs.append((char, i))
-        elif char in close_delims:
-            expected_delim = None
-            try:
-                expected_delim = delims[stack.pop()]
-            except IndexError:
-                pass
-
-            if char == expected_delim:
+            if char in delims:
+                stack.append(char)
                 bs.append((char, i))
-            else:
-                raise Exception("Unexpected %s at %s" % (char, i))
+            elif char in close_delims:
+                expected_delim = None
+                try:
+                    expected_delim = delims[stack.pop()]
+                except IndexError:
+                    pass
 
-        i += 1
+                if char == expected_delim:
+                    bs.append((char, i))
+                else:
+                    raise Exception("Unexpected %s at %s" % (char, i))
+
+    new_state = parse_state.copy()
+    new_state['position'] = i
+    new_state['stack'] = stack
+    return (bs, new_state)
 
 def is_balanced(code, ignored_regions=[]):
     try:
@@ -62,12 +67,14 @@ def is_balanced(code, ignored_regions=[]):
 class InputStateTracker(sublime_plugin.EventListener):
     def on_query_context(self, view, key, operator, operand, match_all):
         if key == "balanced_pairs":
-            print "checking if pairs are balanced"
-
             nchars = view.size()
             code = view.substr(sublime.Region(0, nchars))
             ignored_regions = view.find_by_selector('comment,string')
+
+            start = time.time()
             v = is_balanced(code, ignored_regions)
+            elapsed = time.time() - start
+            print "checked if pairs were balanced in %f" % elapsed
 
             if not v:
                 sublime.status_message("Balanced is deactivated until balanced pairs are fixed...")
