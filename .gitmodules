@@ -7,3 +7,6 @@
 [submodule "SublimePrettyJson"]
 	path = SublimePrettyJson
 	url = https://github.com/dzhibas/SublimePrettyJson.git
+[submodule "GitGutter"]
+	path = GitGutter
+	url = https://github.com/jisaacks/GitGutter.git
